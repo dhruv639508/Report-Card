@@ -208,11 +208,6 @@ export default function ReportCardPreview({ student }: Props) {
         ))}
       </div>
 
-      {/* Result */}
-      <div className="border border-gray-300 rounded px-3 py-1 mb-2 text-center" style={{ background: "hsl(210, 20%, 97%)" }}>
-        <span className="text-[10px] text-gray-500 uppercase tracking-wide mr-2">Result:</span>
-        <span className="font-bold text-sm text-gray-900">{student.result || "—"}</span>
-      </div>
 
       {/* Overall Performance */}
       <div className="mb-2">
