@@ -2,7 +2,7 @@ import React from "react";
 import { StudentData, FA_MAX, SA_MAX, getFaTotal, getSaTotal, getGrandTotal, getFaGrade, getGrandGrade, getOverallObtained, getOverallMax, getOverallPercentage, getGrade, getFaMax, getSaMax } from "@/types/reportCard";
 import schoolLogo from "@/assets/school-logo.png";
 
-interface Props {
+interface Props { 
   student: StudentData;
 }
 
