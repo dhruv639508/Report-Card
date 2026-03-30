@@ -35,10 +35,10 @@ export default function StudentForm({ student, onChange }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {([
             ["name",            "Student Name",      "Enter name"],
+            ["admissionNumber", "Father Name",     "Enter name"],
+            ["section",         "Mother Name",           "Enter name"],
             ["className",       "Class",             "V"],
-            ["section",         "Section",           "A"],
             ["rollNumber",      "Roll Number",       "01"],
-            ["admissionNumber", "Admission No.",     "ADM-001"],
             ["dob",             "Date of Birth",     "", "date"],
             ["session",         "Session",           "2025-2026"],
             ["positionInClass", "Position in Class", "1st"],
