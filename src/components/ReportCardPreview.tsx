@@ -270,7 +270,7 @@ export default function ReportCardPreview({ student }: Props) {
         </div>
       </div>
 
-      /* {/* ── Remarks ── */}
+       {/* ── Remarks ── */}
       {(student.teacherRemarks || student.remarks) && (
         <div className="border border-gray-300 rounded px-3 py-1 mb-2">
           {student.teacherRemarks && (
@@ -286,7 +286,7 @@ export default function ReportCardPreview({ student }: Props) {
             </div>
           )}
         </div>
-      )} */
+      )} 
 
       {/* ── Signatures ── */}
       <div className="grid grid-cols-3 gap-8 absolute bottom-8 left-12 right-12">
