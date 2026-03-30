@@ -250,12 +250,6 @@ export default function ReportCardPreview({ student }: Props) {
         ))}
       </div>
 
-      {/* ── Result ── */}
-      <div className="border border-gray-300 rounded px-3 py-1 mb-2 text-center" style={{ background: "hsl(210, 20%, 97%)" }}>
-        <span className="text-[10px] text-gray-500 uppercase tracking-wide mr-2">Result:</span>
-        <span className="font-bold text-sm text-gray-900">{student.result || "—"}</span>
-      </div>
-
       {/* ── Overall Performance ── */}
       <div className="mb-2">
         <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 px-1" style={{ color: "hsl(210, 65%, 40%)" }}>
@@ -276,7 +270,7 @@ export default function ReportCardPreview({ student }: Props) {
         </div>
       </div>
 
-      {/* ── Remarks ── */}
+      /* {/* ── Remarks ── */}
       {(student.teacherRemarks || student.remarks) && (
         <div className="border border-gray-300 rounded px-3 py-1 mb-2">
           {student.teacherRemarks && (
@@ -292,7 +286,7 @@ export default function ReportCardPreview({ student }: Props) {
             </div>
           )}
         </div>
-      )}
+      )} */
 
       {/* ── Signatures ── */}
       <div className="grid grid-cols-3 gap-8 absolute bottom-8 left-12 right-12">
