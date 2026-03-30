@@ -265,11 +265,7 @@ export default function ReportCardPreview({ student }: Props) {
           <div className="grid grid-cols-2 text-[11px]">
             {[
               ["Student Performance", student.performance],
-              ["Attendance",          student.totalDays > 0 ? `${attendance}%` : "—"],
-              ["Behavior",            student.behavior],
               ["Class Participation", student.classParticipation],
-              ["Discipline",          student.discipline],
-              ["Final Grade",         grade],
             ].map(([label, value], i) => (
               <div key={i} className={`px-3 py-1 flex justify-between ${i < 4 ? "border-b border-gray-200" : ""} ${i % 2 === 0 ? "border-r border-gray-200" : ""}`}>
                 <span className="font-semibold text-gray-500">{label}:</span>
