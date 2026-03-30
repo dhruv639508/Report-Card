@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { StudentData, createEmptyStudent } from "@/types/reportCard";
 import StudentForm from "@/components/StudentForm";
 import ReportCardPreview from "@/components/ReportCardPreview";
-import PDFReportCard from "@/components/PDFReportCard";
 import { Printer, Download, Plus, Trash2, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react";
-import schoolLogo from "@/assets/school-logo.png";
 
 const STORAGE_KEY = "report-card-students-v6";
 
@@ -29,9 +26,7 @@ export default function Index() {
   const [students, setStudents]   = useState<StudentData[]>(loadStudents);
   const [activeIdx, setActiveIdx] = useState(0);
   const [dlState, setDlState]     = useState<DLState>("idle");
-  const [showPDFNode, setShowPDFNode] = useState(false);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const pdfNodeRef = useRef<HTMLDivElement>(null);
+  const previewRef                = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
@@ -70,59 +65,44 @@ export default function Index() {
   };
 
   const handleDownloadPDF = async () => {
+    if (!previewRef.current) return;
     setDlState("loading");
-    // Mount the PDF node first
-    setShowPDFNode(true);
-
-    // Give React time to render the PDF node
-    await new Promise(r => setTimeout(r, 300));
-
     try {
-      const el = pdfNodeRef.current;
-      if (!el) throw new Error("PDF node not found");
-
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"),
         import("jspdf"),
       ]);
 
-      const canvas = await html2canvas(el, {
-        scale: 2,
+      const printArea = previewRef.current.querySelector(".print-area") as HTMLElement;
+      if (!printArea) throw new Error("Print area not found");
+
+      const canvas = await html2canvas(printArea, {
+        scale: 3,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
         logging: false,
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-        scrollX: 0,
-        scrollY: 0,
+        windowWidth: printArea.scrollWidth,
+        windowHeight: printArea.scrollHeight,
       });
 
-      // A4 dimensions in mm
-      const A4_W = 210;
-      const A4_H = 297;
+      const imgData = canvas.toDataURL("image/png");
+      const pdf     = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfW    = pdf.internal.pageSize.getWidth();
+      const pdfH    = pdf.internal.pageSize.getHeight();
 
-      const imgData  = canvas.toDataURL("image/png");
-      const pdf      = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-      // Scale to fit A4 without overflow
-      const imgW = A4_W;
-      const imgH = (canvas.height / canvas.width) * imgW;
-
-      if (imgH <= A4_H) {
-        // Fits on one page
-        pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+      const imgH = (canvas.height / canvas.width) * pdfW;
+      if (imgH <= pdfH) {
+        pdf.addImage(imgData, "PNG", 0, 0, pdfW, imgH);
       } else {
-        // Scale down to fit on one page
-        const scale  = A4_H / imgH;
-        const scaledW = imgW * scale;
-        const scaledH = A4_H;
-        const xOffset = (A4_W - scaledW) / 2;
-        pdf.addImage(imgData, "PNG", xOffset, 0, scaledW, scaledH);
+        const scale   = pdfH / imgH;
+        const scaledW = pdfW * scale;
+        pdf.addImage(imgData, "PNG", (pdfW - scaledW) / 2, 0, scaledW, pdfH);
       }
 
       const name = active.name?.trim().replace(/\s+/g, "_") || "Student";
-      pdf.save(`${name}.pdf`);
+      const cls  = active.className?.trim().replace(/\s+/g, "_") || "Class";
+      pdf.save(`${name}_${cls}.pdf`);
 
       setDlState("done");
       setTimeout(() => setDlState("idle"), 2500);
@@ -130,32 +110,11 @@ export default function Index() {
       console.error("PDF error:", err);
       setDlState("idle");
       alert("PDF generation failed. Please use Print instead.");
-    } finally {
-      setShowPDFNode(false);
     }
   };
 
-  const logoSrc = active.logoUrl || schoolLogo;
-
   return (
     <div className="min-h-screen bg-background">
-
-      {/* Hidden PDF render node — off-screen, not display:none (html2canvas needs it visible) */}
-      {showPDFNode && createPortal(
-        <div
-          ref={pdfNodeRef}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: "-9999px",
-            zIndex: -1,
-            background: "#fff",
-          }}
-        >
-          <PDFReportCard student={active} logoSrc={logoSrc} />
-        </div>,
-        document.body
-      )}
 
       {/* ── Top Bar ── */}
       <header className="no-print sticky top-0 z-50 bg-card border-b border-border px-6 py-3 flex items-center justify-between shadow-sm">
@@ -220,17 +179,20 @@ export default function Index() {
         <StudentForm student={active} onChange={updateStudent} />
       </div>
 
-      {/* ── Preview ── */}
+      {/* ── Preview Label ── */}
       <div className="no-print px-4">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-base font-bold text-primary mb-2">📋 Report Card Preview</h2>
         </div>
       </div>
+
+      {/* ── Preview ── */}
       <div className="flex justify-center pb-8 px-4" ref={previewRef}>
         <div className="shadow-lg border border-border rounded-lg overflow-hidden">
           <ReportCardPreview student={active} />
         </div>
       </div>
+
     </div>
   );
 }
