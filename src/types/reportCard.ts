@@ -1,3 +1,10 @@
+// ─── SCHOOL CONSTANTS — sirf yahan change karo ───────────────────────────────
+export const SCHOOL_NAME    = "Keerti Global Academy";
+export const SCHOOL_ADDRESS = "Sharifpur, Hapur, Uttar Pradesh - 245101";
+export const SCHOOL_PHONE   = "+91 8630237314";
+export const SCHOOL_EMAIL   = "keertiglobalacademy24032025@gmail.com";
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface SubjectMarks {
   name: string;
   fa1: number;
@@ -17,10 +24,6 @@ export interface StudentData {
   admissionNumber: string;
   dob: string;
   session: string;
-  schoolName: string;
-  schoolAddress: string;
-  phone: string;
-  email: string;
   logoUrl: string;
   subjects: SubjectMarks[];
   remarks: string;
@@ -64,56 +67,58 @@ export function getGrade(percentage: number): string {
   return "D";
 }
 
-export function getFaTotal(s: SubjectMarks) {
-  return s.fa1 + s.fa2 + s.fa3 + s.fa4;
-}
+export function getFaTotal(s: SubjectMarks)    { return s.fa1 + s.fa2 + s.fa3 + s.fa4; }
+export function getSaTotal(s: SubjectMarks)    { return s.sa1 + s.sa2; }
+export function getGrandTotal(s: SubjectMarks) { return getFaTotal(s) + getSaTotal(s); }
+export function getFaMax()     { return FA_MAX * 4; }   // 100
+export function getSaMax()     { return SA_MAX * 2; }   // 100
+export function getSubjectMax(){ return getFaMax() + getSaMax(); } // 200
 
-export function getSaTotal(s: SubjectMarks) {
-  return s.sa1 + s.sa2;
+// ─── A subject counts only if ANY mark has been entered ───────────────────────
+export function isSubjectActive(s: SubjectMarks): boolean {
+  return getGrandTotal(s) > 0;
 }
-
-export function getGrandTotal(s: SubjectMarks) {
-  return getFaTotal(s) + getSaTotal(s);
-}
-
-export function getFaMax() { return FA_MAX * 4; } // 100
-export function getSaMax() { return SA_MAX * 2; } // 100
-export function getSubjectMax() { return getFaMax() + getSaMax(); } // 200
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function getFaGrade(s: SubjectMarks): string {
-  const max = getFaMax();
-  return getGrade((getFaTotal(s) / max) * 100);
+  return getGrade((getFaTotal(s) / getFaMax()) * 100);
 }
-
 export function getSaGrade(s: SubjectMarks): string {
-  const max = getSaMax();
-  return getGrade((getSaTotal(s) / max) * 100);
+  return getGrade((getSaTotal(s) / getSaMax()) * 100);
 }
-
 export function getGrandGrade(s: SubjectMarks): string {
-  const max = getSubjectMax();
-  return getGrade((getGrandTotal(s) / max) * 100);
-}
-
-export function getOverallFaObtained(subjects: SubjectMarks[]) {
-  return subjects.reduce((sum, s) => sum + getFaTotal(s), 0);
-}
-
-export function getOverallSaObtained(subjects: SubjectMarks[]) {
-  return subjects.reduce((sum, s) => sum + getSaTotal(s), 0);
+  return getGrade((getGrandTotal(s) / getSubjectMax()) * 100);
 }
 
 export function getOverallObtained(subjects: SubjectMarks[]) {
   return subjects.reduce((sum, s) => sum + getGrandTotal(s), 0);
 }
 
+// ─── Max = only active (filled) subjects ──────────────────────────────────────
 export function getOverallMax(subjects: SubjectMarks[]) {
-  return subjects.length * getSubjectMax();
+  const active = subjects.filter(isSubjectActive).length;
+  return active * getSubjectMax();
 }
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function getOverallPercentage(subjects: SubjectMarks[]) {
   const max = getOverallMax(subjects);
   return max > 0 ? (getOverallObtained(subjects) / max) * 100 : 0;
+}
+export function getOverallFaObtained(subjects: SubjectMarks[]) {
+  return subjects.reduce((sum, s) => sum + getFaTotal(s), 0);
+}
+export function getOverallSaObtained(subjects: SubjectMarks[]) {
+  return subjects.reduce((sum, s) => sum + getSaTotal(s), 0);
+}
+
+// FA active max — only subjects where FA marks were entered
+export function getActiveFaMax(subjects: SubjectMarks[]) {
+  return subjects.filter(s => getFaTotal(s) > 0).length * getFaMax();
+}
+// SA active max — only subjects where SA marks were entered
+export function getActiveSaMax(subjects: SubjectMarks[]) {
+  return subjects.filter(s => getSaTotal(s) > 0).length * getSaMax();
 }
 
 export function createEmptyStudent(): StudentData {
@@ -126,10 +131,6 @@ export function createEmptyStudent(): StudentData {
     admissionNumber: "",
     dob: "",
     session: "2025-2026",
-    schoolName: "Keerti Global Academy",
-    schoolAddress: "Sharifpur, Hapur, Uttar Pradesh - 245101",
-    phone: "+91 8630237314",
-    email: "keertiglobalacademy24032025@gmail.com",
     logoUrl: "",
     subjects: DEFAULT_SUBJECTS.map(s => ({ ...s })),
     remarks: "",
