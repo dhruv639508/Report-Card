@@ -1,4 +1,4 @@
-import { StudentData, SubjectMarks, FA_MAX, SA_MAX, getFaTotal, getSaTotal, getGrandTotal, getFaGrade, getGrandGrade, getOverallObtained, getOverallMax, getOverallPercentage, getGrade, getFaMax, getSaMax } from "@/types/reportCard";
+import { StudentData, SubjectMarks, FA_MAX, SA_MAX, getFaTotal, getSaTotal, getGrandTotal, getFaGrade, getGrandGrade, getOverallObtained, getOverallPercentage, getGrade, getFaMax, isSubjectActive } from "@/types/reportCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,9 @@ export default function StudentForm({ student, onChange }: Props) {
     onChange({ ...student, subjects });
   };
 
-  const percentage = getOverallPercentage(student.subjects);
+  const percentage         = getOverallPercentage(student.subjects);
+  const faActiveCount      = student.subjects.filter(s => getFaTotal(s) > 0).length;
+  const activeSubjCount    = student.subjects.filter(isSubjectActive).length;
 
   return (
     <div className="space-y-5">
@@ -32,15 +34,15 @@ export default function StudentForm({ student, onChange }: Props) {
         <h3 className="text-base font-bold text-primary mb-3 uppercase tracking-wide">Student Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {([
-            ["name", "Student Name", "Enter name"],
-            ["className", "Class", "V"],
-            ["section", "Section", "A"],
-            ["rollNumber", "Roll Number", "01"],
-            ["admissionNumber", "Admission No.", "ADM-001"],
-            ["dob", "Date of Birth", "", "date"],
-            ["session", "Session", "2025-2026"],
+            ["name",            "Student Name",      "Enter name"],
+            ["className",       "Class",             "V"],
+            ["section",         "Section",           "A"],
+            ["rollNumber",      "Roll Number",       "01"],
+            ["admissionNumber", "Admission No.",     "ADM-001"],
+            ["dob",             "Date of Birth",     "", "date"],
+            ["session",         "Session",           "2025-2026"],
             ["positionInClass", "Position in Class", "1st"],
-            ["result", "Result", "Promoted to Class VI"],
+            ["result",          "Result",            "Promoted to Class VI"],
           ] as const).map(([key, label, placeholder, type]) => (
             <div key={key}>
               <Label className="text-xs">{label}</Label>
@@ -56,7 +58,7 @@ export default function StudentForm({ student, onChange }: Props) {
         </div>
       </Card>
 
-      {/* FA Marks Entry */}
+      {/* FA Marks */}
       <Card className="p-5">
         <h3 className="text-base font-bold text-primary mb-3 uppercase tracking-wide">Formative Assessment (FA)</h3>
         <div className="overflow-x-auto">
@@ -64,10 +66,9 @@ export default function StudentForm({ student, onChange }: Props) {
             <thead>
               <tr className="bg-secondary">
                 <th rowSpan={2} className="border border-border p-2 text-left font-semibold">Subject</th>
-                <th colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">FA1</th>
-                <th colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">FA2</th>
-                <th colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">FA3</th>
-                <th colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">FA4</th>
+                {["FA1","FA2","FA3","FA4"].map(h => (
+                  <th key={h} colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">{h}</th>
+                ))}
                 <th rowSpan={2} className="border border-border p-2 text-center font-semibold w-16">FA Total</th>
                 <th rowSpan={2} className="border border-border p-2 text-center font-semibold w-14">Grade</th>
               </tr>
@@ -107,9 +108,10 @@ export default function StudentForm({ student, onChange }: Props) {
                 <td className="border border-border p-2">Total</td>
                 {[1,2,3,4].map(n => (
                   <>
-                    <td key={`tmm${n}`} className="border border-border p-1 text-center text-xs">{student.subjects.length * FA_MAX}</td>
+                    {/* M.M = only active subjects */}
+                    <td key={`tmm${n}`} className="border border-border p-1 text-center text-xs">{faActiveCount * FA_MAX}</td>
                     <td key={`tmo${n}`} className="border border-border p-1 text-center text-xs">
-                      {student.subjects.reduce((s, x) => s + (x[`fa${n}` as keyof SubjectMarks] as number), 0)}
+                      {student.subjects.filter(s => getFaTotal(s) > 0).reduce((s, x) => s + (x[`fa${n}` as keyof SubjectMarks] as number), 0)}
                     </td>
                   </>
                 ))}
@@ -117,7 +119,9 @@ export default function StudentForm({ student, onChange }: Props) {
                   {student.subjects.reduce((s, x) => s + getFaTotal(x), 0)}
                 </td>
                 <td className="border border-border p-2 text-center">
-                  {getGrade((student.subjects.reduce((s, x) => s + getFaTotal(x), 0) / (student.subjects.length * getFaMax())) * 100)}
+                  {faActiveCount > 0
+                    ? getGrade((student.subjects.reduce((s, x) => s + getFaTotal(x), 0) / (faActiveCount * getFaMax())) * 100)
+                    : "—"}
                 </td>
               </tr>
             </tfoot>
@@ -125,7 +129,7 @@ export default function StudentForm({ student, onChange }: Props) {
         </div>
       </Card>
 
-      {/* SA Marks Entry */}
+      {/* SA Marks */}
       <Card className="p-5">
         <h3 className="text-base font-bold text-primary mb-3 uppercase tracking-wide">Summative Assessment (SA)</h3>
         <div className="overflow-x-auto">
@@ -133,8 +137,9 @@ export default function StudentForm({ student, onChange }: Props) {
             <thead>
               <tr className="bg-secondary">
                 <th rowSpan={2} className="border border-border p-2 text-left font-semibold">Subject</th>
-                <th colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">SA1</th>
-                <th colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">SA2</th>
+                {["SA1","SA2"].map(h => (
+                  <th key={h} colSpan={2} className="border border-border p-1.5 text-center font-semibold text-xs">{h}</th>
+                ))}
                 <th rowSpan={2} className="border border-border p-2 text-center font-semibold w-16">SA Total</th>
                 <th rowSpan={2} className="border border-border p-2 text-center font-semibold w-20">Grand Total</th>
                 <th rowSpan={2} className="border border-border p-2 text-center font-semibold w-14">Grade</th>
@@ -176,9 +181,11 @@ export default function StudentForm({ student, onChange }: Props) {
                 <td className="border border-border p-2">Total</td>
                 {[1,2].map(n => (
                   <>
-                    <td key={`stmm${n}`} className="border border-border p-1 text-center text-xs">{student.subjects.length * SA_MAX}</td>
+                    <td key={`stmm${n}`} className="border border-border p-1 text-center text-xs">
+                      {student.subjects.filter(isSubjectActive).length * SA_MAX}
+                    </td>
                     <td key={`stmo${n}`} className="border border-border p-1 text-center text-xs">
-                      {student.subjects.reduce((s, x) => s + (x[`sa${n}` as keyof SubjectMarks] as number), 0)}
+                      {student.subjects.filter(isSubjectActive).reduce((s, x) => s + (x[`sa${n}` as keyof SubjectMarks] as number), 0)}
                     </td>
                   </>
                 ))}
@@ -189,7 +196,7 @@ export default function StudentForm({ student, onChange }: Props) {
                   {getOverallObtained(student.subjects)}
                 </td>
                 <td className="border border-border p-2 text-center">
-                  {getGrade(percentage)}
+                  {activeSubjCount > 0 ? getGrade(percentage) : "—"}
                 </td>
               </tr>
             </tfoot>
@@ -216,21 +223,17 @@ export default function StudentForm({ student, onChange }: Props) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           {([
-            ["performance", "Student Performance"],
-            ["behavior", "Behavior"],
-            ["classParticipation", "Class Participation"],
-            ["discipline", "Discipline"],
+            ["performance",       "Student Performance"],
+            ["behavior",          "Behavior"],
+            ["classParticipation","Class Participation"],
+            ["discipline",        "Discipline"],
           ] as const).map(([key, label]) => (
             <div key={key}>
               <Label className="text-xs">{label}</Label>
               <Select value={student[key]} onValueChange={v => set(key, v)}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {RATING_OPTIONS.map(opt => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
+                  {RATING_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
