@@ -57,10 +57,10 @@ export default function ReportCardPreview({ student }: Props) {
         <div className="grid grid-cols-3 text-[11px]">
           {[
             ["Student Name",  student.name],
-            ["Class",         student.className],
-            ["Section",       student.section],
+            ["Father Name", student.admissionNumber],
+            ["Mother Name",       student.section],
             ["Roll No.",      student.rollNumber],
-            ["Admission No.", student.admissionNumber],
+            ["Class",         student.className],
             ["Date of Birth", student.dob],
             ["Session",       student.session],
             ["Position",      student.positionInClass],
