@@ -1,39 +1,49 @@
 import React from "react";
-import { StudentData, FA_MAX, SA_MAX, getFaTotal, getSaTotal, getGrandTotal, getFaGrade, getGrandGrade, getOverallObtained, getOverallMax, getOverallPercentage, getGrade, getFaMax, getSaMax } from "@/types/reportCard";
+import {
+  StudentData, FA_MAX, SA_MAX,
+  SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE, SCHOOL_EMAIL,
+  getFaTotal, getSaTotal, getGrandTotal,
+  getFaGrade, getGrandGrade,
+  getOverallObtained, getOverallMax, getOverallPercentage,
+  getGrade, getFaMax, getSaMax,
+  isSubjectActive,
+} from "@/types/reportCard";
 import schoolLogo from "@/assets/school-logo.png";
 
-interface Props { 
-  student: StudentData;
-}
+interface Props { student: StudentData; }
 
 export default function ReportCardPreview({ student }: Props) {
   const attendance = student.totalDays > 0
     ? ((student.presentDays / student.totalDays) * 100).toFixed(1)
     : "—";
 
-  const obtained = getOverallObtained(student.subjects);
-  const max = getOverallMax(student.subjects);
+  const obtained   = getOverallObtained(student.subjects);
+  const max        = getOverallMax(student.subjects);       // only active subjects
   const percentage = getOverallPercentage(student.subjects);
-  const grade = max > 0 ? getGrade(percentage) : "—";
+  const grade      = max > 0 ? getGrade(percentage) : "—";
+  const logoSrc    = student.logoUrl || schoolLogo;
 
-  const logoSrc = student.logoUrl || schoolLogo;
+  // Active subject counts for tfoot M.M
+  const faActiveCount = student.subjects.filter(s => getFaTotal(s) > 0).length;
+  const saActiveCount = student.subjects.filter(s => getSaTotal(s) > 0).length;
 
   const thStyle = { background: "hsl(210, 45%, 93%)" };
-  const altRow = { background: "hsl(210, 20%, 97%)" };
+  const altRow  = { background: "hsl(210, 20%, 97%)" };
 
   return (
-    <div className="print-area bg-white mx-auto text-gray-900 relative" style={{ width: "210mm", minHeight: "297mm", padding: "8mm 12mm", fontFamily: "'Segoe UI', Roboto, sans-serif" }}>
-      {/* Header */}
+    <div
+      className="print-area bg-white mx-auto text-gray-900 relative"
+      style={{ width: "210mm", minHeight: "297mm", padding: "8mm 12mm", fontFamily: "'Segoe UI', Roboto, sans-serif" }}
+    >
+      {/* ── Header ── */}
       <div className="flex items-center gap-4 mb-2">
         <img src={logoSrc} alt="School Logo" className="w-16 h-16 object-contain flex-shrink-0" />
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold tracking-wide" style={{ color: "hsl(210, 65%, 35%)" }}>
-            {student.schoolName || "Keerti Play"}
+            {SCHOOL_NAME}
           </h1>
-          <p className="text-[10px] text-gray-500 mt-0.5">{student.schoolAddress || "123 Education Lane, New Delhi"}</p>
-          <p className="text-[10px] text-gray-500">
-            {[student.phone, student.email].filter(Boolean).join(" | ")}
-          </p>
+          <p className="text-[10px] text-gray-500 mt-0.5">{SCHOOL_ADDRESS}</p>
+          <p className="text-[10px] text-gray-500">{[SCHOOL_PHONE, SCHOOL_EMAIL].filter(Boolean).join(" | ")}</p>
         </div>
         <div className="w-16" />
       </div>
@@ -42,21 +52,21 @@ export default function ReportCardPreview({ student }: Props) {
         Report Card — {student.session || "2025-2026"}
       </p>
 
-      {/* Student Info */}
+      {/* ── Student Info ── */}
       <div className="border border-gray-300 rounded mb-2">
         <div className="grid grid-cols-3 text-[11px]">
           {[
-            ["Student Name", student.name],
-            ["Class", student.className],
-            ["Section", student.section],
-            ["Roll No.", student.rollNumber],
+            ["Student Name",  student.name],
+            ["Class",         student.className],
+            ["Section",       student.section],
+            ["Roll No.",      student.rollNumber],
             ["Admission No.", student.admissionNumber],
             ["Date of Birth", student.dob],
-            ["Session", student.session],
-            ["Position", student.positionInClass],
-            ["Attendance", `${student.presentDays}/${student.totalDays} (${attendance}%)`],
+            ["Session",       student.session],
+            ["Position",      student.positionInClass],
+            ["Attendance",    `${student.presentDays}/${student.totalDays} (${attendance}%)`],
           ].map(([label, value], i) => (
-            <div key={i} className={`px-3 py-1 flex gap-1 ${i < 6 ? "border-b border-gray-200" : ""} ${(i % 3 !== 2) ? "border-r border-gray-200" : ""}`}>
+            <div key={i} className={`px-3 py-1 flex gap-1 ${i < 6 ? "border-b border-gray-200" : ""} ${i % 3 !== 2 ? "border-r border-gray-200" : ""}`}>
               <span className="font-semibold text-gray-500">{label}:</span>
               <span className="font-medium text-gray-900">{value || "—"}</span>
             </div>
@@ -64,7 +74,7 @@ export default function ReportCardPreview({ student }: Props) {
         </div>
       </div>
 
-      {/* FA Table */}
+      {/* ── FA Table ── */}
       <div className="mb-2">
         <p className="text-[13px] font-bold uppercase tracking-wider mb-0.5 px-1" style={{ color: "hsl(210, 65%, 40%)" }}>
           Formative Assessment (FA)
@@ -89,19 +99,31 @@ export default function ReportCardPreview({ student }: Props) {
             </tr>
           </thead>
           <tbody>
-            {student.subjects.map((s, i) => (
-              <tr key={s.name} style={i % 2 === 1 ? altRow : {}}>
-                <td className="border border-gray-300 px-1.5 py-2 font-medium">{s.name}</td>
-                {(["fa1","fa2","fa3","fa4"] as const).map(f => (
-                  <React.Fragment key={f}>
-                    <td className="border border-gray-300 px-0.5 py-2 text-center text-gray-400">{FA_MAX}</td>
-                    <td className="border border-gray-300 px-0.5 py-2 text-center">{s[f]}</td>
-                  </React.Fragment>
-                ))}
-                <td className="border border-gray-300 px-1 py-2 text-center font-semibold">{getFaTotal(s)}</td>
-                <td className="border border-gray-300 px-1 py-2 text-center font-semibold">{getFaGrade(s)}</td>
-              </tr>
-            ))}
+            {student.subjects.map((s, i) => {
+              const active = isSubjectActive(s);
+              return (
+                <tr key={s.name} style={i % 2 === 1 ? altRow : {}}>
+                  <td className="border border-gray-300 px-1.5 py-2 font-medium">{s.name}</td>
+                  {(["fa1","fa2","fa3","fa4"] as const).map(f => (
+                    <React.Fragment key={f}>
+                      {/* Show M.M only if subject is active */}
+                      <td className="border border-gray-300 px-0.5 py-2 text-center text-gray-400">
+                        {active ? FA_MAX : "—"}
+                      </td>
+                      <td className="border border-gray-300 px-0.5 py-2 text-center">
+                        {active ? s[f] : "—"}
+                      </td>
+                    </React.Fragment>
+                  ))}
+                  <td className="border border-gray-300 px-1 py-2 text-center font-semibold">
+                    {active ? getFaTotal(s) : "—"}
+                  </td>
+                  <td className="border border-gray-300 px-1 py-2 text-center font-semibold">
+                    {active ? getFaGrade(s) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr style={thStyle}>
@@ -110,9 +132,12 @@ export default function ReportCardPreview({ student }: Props) {
                 const key = `fa${n}` as keyof typeof student.subjects[0];
                 return (
                   <React.Fragment key={n}>
-                    <td className="border border-gray-300 px-0.5 py-0.5 text-center font-bold text-[9px]">{student.subjects.length * FA_MAX}</td>
+                    {/* M.M total = only active subjects */}
                     <td className="border border-gray-300 px-0.5 py-0.5 text-center font-bold text-[9px]">
-                      {student.subjects.reduce((sum, s) => sum + (s[key] as number), 0)}
+                      {faActiveCount * FA_MAX}
+                    </td>
+                    <td className="border border-gray-300 px-0.5 py-0.5 text-center font-bold text-[9px]">
+                      {student.subjects.filter(s => getFaTotal(s) > 0).reduce((sum, s) => sum + (s[key] as number), 0)}
                     </td>
                   </React.Fragment>
                 );
@@ -121,14 +146,16 @@ export default function ReportCardPreview({ student }: Props) {
                 {student.subjects.reduce((sum, s) => sum + getFaTotal(s), 0)}
               </td>
               <td className="border border-gray-300 px-1 py-0.5 text-center font-bold">
-                {getGrade((student.subjects.reduce((sum, s) => sum + getFaTotal(s), 0) / (student.subjects.length * getFaMax())) * 100)}
+                {faActiveCount > 0
+                  ? getGrade((student.subjects.reduce((sum, s) => sum + getFaTotal(s), 0) / (faActiveCount * getFaMax())) * 100)
+                  : "—"}
               </td>
             </tr>
           </tfoot>
         </table>
       </div>
 
-      {/* SA Table */}
+      {/* ── SA Table ── */}
       <div className="mb-2">
         <p className="text-[13px] font-bold uppercase tracking-wider mb-0.5 px-1" style={{ color: "hsl(210, 65%, 40%)" }}>
           Summative Assessment (SA)
@@ -154,20 +181,33 @@ export default function ReportCardPreview({ student }: Props) {
             </tr>
           </thead>
           <tbody>
-            {student.subjects.map((s, i) => (
-              <tr key={s.name} style={i % 2 === 1 ? altRow : {}}>
-                <td className="border border-gray-300 px-1.5 py-2 font-medium">{s.name}</td>
-                {(["sa1","sa2"] as const).map(f => (
-                  <React.Fragment key={f}>
-                    <td className="border border-gray-300 px-0.5 py-2 text-center text-gray-400">{SA_MAX}</td>
-                    <td className="border border-gray-300 px-0.5 py-2 text-center">{s[f]}</td>
-                  </React.Fragment>
-                ))}
-                <td className="border border-gray-300 px-1 py-2 text-center font-semibold">{getSaTotal(s)}</td>
-                <td className="border border-gray-300 px-1 py-2 text-center font-semibold">{getGrandTotal(s)}</td>
-                <td className="border border-gray-300 px-1 py-2 text-center font-semibold">{getGrandGrade(s)}</td>
-              </tr>
-            ))}
+            {student.subjects.map((s, i) => {
+              const active = isSubjectActive(s);
+              return (
+                <tr key={s.name} style={i % 2 === 1 ? altRow : {}}>
+                  <td className="border border-gray-300 px-1.5 py-2 font-medium">{s.name}</td>
+                  {(["sa1","sa2"] as const).map(f => (
+                    <React.Fragment key={f}>
+                      <td className="border border-gray-300 px-0.5 py-2 text-center text-gray-400">
+                        {active ? SA_MAX : "—"}
+                      </td>
+                      <td className="border border-gray-300 px-0.5 py-2 text-center">
+                        {active ? s[f] : "—"}
+                      </td>
+                    </React.Fragment>
+                  ))}
+                  <td className="border border-gray-300 px-1 py-2 text-center font-semibold">
+                    {active ? getSaTotal(s) : "—"}
+                  </td>
+                  <td className="border border-gray-300 px-1 py-2 text-center font-semibold">
+                    {active ? getGrandTotal(s) : "—"}
+                  </td>
+                  <td className="border border-gray-300 px-1 py-2 text-center font-semibold">
+                    {active ? getGrandGrade(s) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr style={thStyle}>
@@ -176,9 +216,11 @@ export default function ReportCardPreview({ student }: Props) {
                 const key = `sa${n}` as keyof typeof student.subjects[0];
                 return (
                   <React.Fragment key={n}>
-                    <td className="border border-gray-300 px-0.5 py-0.5 text-center font-bold text-[9px]">{student.subjects.length * SA_MAX}</td>
                     <td className="border border-gray-300 px-0.5 py-0.5 text-center font-bold text-[9px]">
-                      {student.subjects.reduce((sum, s) => sum + (s[key] as number), 0)}
+                      {saActiveCount * SA_MAX}
+                    </td>
+                    <td className="border border-gray-300 px-0.5 py-0.5 text-center font-bold text-[9px]">
+                      {student.subjects.filter(s => getSaTotal(s) > 0).reduce((sum, s) => sum + (s[key] as number), 0)}
                     </td>
                   </React.Fragment>
                 );
@@ -193,12 +235,12 @@ export default function ReportCardPreview({ student }: Props) {
         </table>
       </div>
 
-      {/* Summary */}
+      {/* ── Summary boxes ── */}
       <div className="grid grid-cols-4 gap-2 mb-2">
         {[
           ["Total Obtained", `${obtained}`],
           ["Maximum Marks", `${max}`],
-          ["Percentage", `${percentage.toFixed(1)}%`],
+          ["Percentage",    `${percentage.toFixed(1)}%`],
           ["Overall Grade", grade],
         ].map(([label, value]) => (
           <div key={label} className="border border-gray-300 rounded px-2 py-1 text-center" style={{ background: "hsl(210, 45%, 95%)" }}>
@@ -208,8 +250,13 @@ export default function ReportCardPreview({ student }: Props) {
         ))}
       </div>
 
+      {/* ── Result ── */}
+      <div className="border border-gray-300 rounded px-3 py-1 mb-2 text-center" style={{ background: "hsl(210, 20%, 97%)" }}>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wide mr-2">Result:</span>
+        <span className="font-bold text-sm text-gray-900">{student.result || "—"}</span>
+      </div>
 
-      {/* Overall Performance */}
+      {/* ── Overall Performance ── */}
       <div className="mb-2">
         <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 px-1" style={{ color: "hsl(210, 65%, 40%)" }}>
           Overall Performance
@@ -218,7 +265,11 @@ export default function ReportCardPreview({ student }: Props) {
           <div className="grid grid-cols-2 text-[11px]">
             {[
               ["Student Performance", student.performance],
+              ["Attendance",          student.totalDays > 0 ? `${attendance}%` : "—"],
+              ["Behavior",            student.behavior],
               ["Class Participation", student.classParticipation],
+              ["Discipline",          student.discipline],
+              ["Final Grade",         grade],
             ].map(([label, value], i) => (
               <div key={i} className={`px-3 py-1 flex justify-between ${i < 4 ? "border-b border-gray-200" : ""} ${i % 2 === 0 ? "border-r border-gray-200" : ""}`}>
                 <span className="font-semibold text-gray-500">{label}:</span>
@@ -229,7 +280,7 @@ export default function ReportCardPreview({ student }: Props) {
         </div>
       </div>
 
-      {/* Teacher's Remarks */}
+      {/* ── Remarks ── */}
       {(student.teacherRemarks || student.remarks) && (
         <div className="border border-gray-300 rounded px-3 py-1 mb-2">
           {student.teacherRemarks && (
@@ -247,8 +298,8 @@ export default function ReportCardPreview({ student }: Props) {
         </div>
       )}
 
-      {/* Signatures */}
-      <div className="grid grid-cols-3 gap-8 mt-4 pt-2">
+      {/* ── Signatures ── */}
+      <div className="grid grid-cols-3 gap-8 absolute bottom-8 left-12 right-12">
         {["Class Teacher", "Guardian", "Principal"].map(role => (
           <div key={role} className="text-center">
             <div className="border-t border-gray-900 w-28 mx-auto mb-1" />
