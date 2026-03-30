@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { StudentData, createEmptyStudent } from "@/types/reportCard";
 import StudentForm from "@/components/StudentForm";
 import ReportCardPreview from "@/components/ReportCardPreview";
-import { Printer, Download, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Printer, Download, Plus, Trash2, ChevronLeft, ChevronRight, Loader2, CheckCircle } from "lucide-react";
 
 const STORAGE_KEY = "report-card-students-v6";
 
@@ -20,38 +20,12 @@ function loadStudents(): StudentData[] {
   return [createEmptyStudent()];
 }
 
-// Opens a print window — used for both Print and Save as PDF
-function openPrintWindow(html: string, title: string) {
-  const win = window.open("", "_blank");
-  if (!win) return;
-  win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <title>${title}</title>
-  <style>
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { margin: 0; padding: 0; background: white; }
-    @page { size: A4; margin: 0; }
-    .print-area { width: 210mm; min-height: 297mm; padding: 8mm 12mm; }
-    .no-print { display: none !important; }
-  </style>
-</head>
-<body>
-  ${html}
-  <script>
-    window.onload = function() {
-      window.focus();
-      window.print();
-    };
-  </script>
-</body>
-</html>`);
-  win.document.close();
-}
+type DLState = "idle" | "loading" | "done";
 
 export default function Index() {
   const [students, setStudents]   = useState<StudentData[]>(loadStudents);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [dlState, setDlState]     = useState<DLState>("idle");
   const previewRef                = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,27 +50,67 @@ export default function Index() {
     setActiveIdx(Math.max(0, activeIdx - 1));
   };
 
-  const getPreviewHTML = () => {
-    if (!previewRef.current) return "";
-    // Inline all styles from the page so the new window renders correctly
-    const styleSheets = Array.from(document.styleSheets)
-      .map(sheet => {
-        try {
-          return Array.from(sheet.cssRules).map(r => r.cssText).join("\n");
-        } catch { return ""; }
-      }).join("\n");
-    return `<style>${styleSheets}</style>${previewRef.current.innerHTML}`;
-  };
-
   const handlePrint = () => {
-    const name = active.name?.trim() || "Report Card";
-    openPrintWindow(getPreviewHTML(), name);
+    const win = window.open("", "_blank");
+    if (!win || !previewRef.current) return;
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(el => el.outerHTML).join("");
+    win.document.write(`<!DOCTYPE html><html><head>${styles}<style>
+      body{margin:0;padding:0;background:white}
+      @page{size:A4;margin:0}
+      .print-area{width:210mm;min-height:297mm;padding:8mm 12mm}
+    </style></head><body>${previewRef.current.innerHTML}</body></html>`);
+    win.document.close();
+    win.onload = () => { win.print(); win.close(); };
   };
 
-  const handleDownloadPDF = () => {
-    const name = active.name?.trim().replace(/\s+/g, "_") || "Student";
-    const cls  = active.className?.trim().replace(/\s+/g, "_") || "Class";
-    openPrintWindow(getPreviewHTML(), `${name}_${cls}`);
+  const handleDownloadPDF = async () => {
+    if (!previewRef.current) return;
+    setDlState("loading");
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const printArea = previewRef.current.querySelector(".print-area") as HTMLElement;
+      if (!printArea) throw new Error("Print area not found");
+
+      const canvas = await html2canvas(printArea, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: printArea.scrollWidth,
+        windowHeight: printArea.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf     = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfW    = pdf.internal.pageSize.getWidth();
+      const pdfH    = pdf.internal.pageSize.getHeight();
+
+      const imgH = (canvas.height / canvas.width) * pdfW;
+      if (imgH <= pdfH) {
+        pdf.addImage(imgData, "PNG", 0, 0, pdfW, imgH);
+      } else {
+        const scale   = pdfH / imgH;
+        const scaledW = pdfW * scale;
+        pdf.addImage(imgData, "PNG", (pdfW - scaledW) / 2, 0, scaledW, pdfH);
+      }
+
+      const name = active.name?.trim().replace(/\s+/g, "_") || "Student";
+      const cls  = active.className?.trim().replace(/\s+/g, "_") || "Class";
+      pdf.save(`${name}_${cls}.pdf`);
+
+      setDlState("done");
+      setTimeout(() => setDlState("idle"), 2500);
+    } catch (err) {
+      console.error("PDF error:", err);
+      setDlState("idle");
+      alert("PDF generation failed. Please use Print instead.");
+    }
   };
 
   return (
@@ -118,8 +132,19 @@ export default function Index() {
           <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-1" /> Print
           </Button>
-          <Button size="sm" onClick={handleDownloadPDF}>
-            <Download className="w-4 h-4 mr-1" /> Save as PDF
+          <Button
+            size="sm"
+            onClick={handleDownloadPDF}
+            disabled={dlState === "loading"}
+            className={dlState === "done" ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            {dlState === "loading" ? (
+              <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Generating…</>
+            ) : dlState === "done" ? (
+              <><CheckCircle className="w-4 h-4 mr-1" /> Downloaded!</>
+            ) : (
+              <><Download className="w-4 h-4 mr-1" /> Download PDF</>
+            )}
           </Button>
         </div>
       </header>
